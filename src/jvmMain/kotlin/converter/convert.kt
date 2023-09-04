@@ -2,6 +2,8 @@ package converter
 
 
 fun convert(pathIn: String, pathOut: String){
+    println("path in $pathIn")
+    println("path out $pathOut")
     // Открываем файл
     val currentSpec = ReadExcelFile(pathIn)
     // Извлекаем листы

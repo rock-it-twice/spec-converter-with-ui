@@ -248,5 +248,5 @@ class CreateExcelFile(path: String,
         workbook.write(tempFile.outputStream())
         workbook.close()
     }
-    private val tempFile = kotlin.io.path.createTempFile(Path(path), "test_output_ver-2_", ".xlsx")
+    private val tempFile = kotlin.io.path.createTempFile(Path(path), "ОС_", ".xlsx")
 }
