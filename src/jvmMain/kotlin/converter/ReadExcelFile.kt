@@ -24,6 +24,7 @@ class ReadExcelFile(private val path: String) {
                 workSheets.add(currentSheet)
                 cnt --
             }
+            workbook.close()
             return workSheets
     }
 }
