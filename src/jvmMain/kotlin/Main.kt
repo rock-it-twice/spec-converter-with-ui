@@ -1,12 +1,19 @@
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
 import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -14,11 +21,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import org.apache.poi.sl.usermodel.VerticalAlignment
-import org.apache.poi.xddf.usermodel.chart.Shape
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import javax.swing.JFileChooser
 import javax.swing.UIManager
 import javax.swing.filechooser.FileNameExtensionFilter
+import java.awt.Desktop
+import java.io.File
 
 
 
@@ -40,7 +49,10 @@ fun App() {
         fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
     }
 
+    // Отслеживание состояния кнопки
     val isButtonEnabled = remember { mutableStateOf(false) }
+    // Отслеживание состояния кнопки открытия проводника
+    val isPathButtonEnabled = remember { mutableStateOf(false) }
 
     // Запоминаем путь импорта / экспорта
     val pathIn = remember { mutableStateOf("файл не выбран") }
@@ -50,11 +62,13 @@ fun App() {
 
     MaterialTheme {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center) {
+            // Шапка
             Text(text = "Specification converter ver: 1.0",
                 modifier = Modifier.align(Alignment.CenterHorizontally)
                                    .padding(top = 30.dp, bottom = 15.dp),
                 fontWeight = FontWeight.Bold
             )
+            // Выбор файла для конвертации
             Row(modifier = Modifier.fillMaxWidth().padding(start = 50.dp, end = 50.dp),
                 horizontalArrangement = Arrangement.SpaceBetween){
                 Text(text = "Исходный файл:",
@@ -88,6 +102,7 @@ fun App() {
                 }
             }
 
+            // Выбор папки для сохранения общей спецификации
             Row(Modifier.fillMaxWidth().padding(start = 50.dp, end = 50.dp),
                 horizontalArrangement = Arrangement.SpaceBetween){
                 Text("Сохранить в папку:",
@@ -122,15 +137,56 @@ fun App() {
                     Text("изменить")
                 }
             }
+            // Сформировать общую спецификацию
+            Row(modifier = Modifier.fillMaxWidth().padding(start = 50.dp, end = 50.dp),
+                horizontalArrangement = Arrangement.SpaceBetween) {
+                var progress by remember { mutableStateOf(0.0f) }
+                val scope = rememberCoroutineScope()
+                Button(
+                    modifier = Modifier,
+                    colors = ButtonDefaults.buttonColors(backgroundColor = (Color.LightGray)),
+                    enabled = isButtonEnabled.value,
+                    onClick = {
+                        isPathButtonEnabled.value = false
+                        scope.launch {
+                            while (progress < 1f){
+                                progress += 0.1f
+                                delay(100L)
+                            }
+                        }
+                        converter.convert(pathIn.value, pathOut.value)
+                        // Меняем значение видимости кнопки перехода в папку
+                        isPathButtonEnabled.value = true
+                        progress = 0f
+                    })
+                {
+                    Text("Сформировать общую спецификацию")
+                }
 
-            Button(modifier = Modifier.align(Alignment.CenterHorizontally),
-                colors = ButtonDefaults.buttonColors(backgroundColor = (Color.LightGray)),
-                enabled = isButtonEnabled.value,
-                onClick = {
-                    converter.convert(pathIn.value, pathOut.value)
-                }){
-                Text("Сформировать общую спецификацию")
+                // Индикатор прогресса
+                if (!isPathButtonEnabled.value){
+                    LinearProgressIndicator(
+                        modifier = Modifier.align(Alignment.CenterVertically)
+                            .padding(horizontal = 15.dp),
+                        progress = progress
+                    )
+                } else {
+                    AnimatedVisibility(
+                        visible = true,
+                        modifier = Modifier,
+                        enter = fadeIn(animationSpec = tween(durationMillis = 300, easing = LinearEasing))
+                    ){
+                        Icon(Icons.Default.Check,
+                            contentDescription = "Check mark",
+                            tint = Color.Green
+                        )
+                    }
+                }
+
+
+
             }
+
 
         }
     }
