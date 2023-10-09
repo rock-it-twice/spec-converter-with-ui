@@ -177,6 +177,7 @@ fun App() {
                             .padding(horizontal = 15.dp),
                         progress = progress
                 )}
+
                 AnimatedVisibility(
                         visible = isPathEnabled.value,
                         modifier = Modifier,
