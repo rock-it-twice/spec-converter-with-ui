@@ -2,18 +2,16 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -27,6 +25,7 @@ import javax.swing.JFileChooser
 import javax.swing.UIManager
 import javax.swing.filechooser.FileNameExtensionFilter
 import java.awt.Desktop
+import java.awt.Dimension
 import java.io.File
 
 
@@ -51,8 +50,8 @@ fun App() {
 
     // Отслеживание состояния кнопки
     val isButtonEnabled = remember { mutableStateOf(false) }
-    // Отслеживание состояния кнопки открытия проводника
-    val isPathButtonEnabled = remember { mutableStateOf(false) }
+    // Отслеживание состояния существования пути к папке с общей спецификацией
+    val isPathEnabled = remember { mutableStateOf(false) }
 
     // Запоминаем путь импорта / экспорта
     val pathIn = remember { mutableStateOf("файл не выбран") }
@@ -139,15 +138,18 @@ fun App() {
             }
             // Сформировать общую спецификацию
             Row(modifier = Modifier.fillMaxWidth().padding(start = 50.dp, end = 50.dp),
-                horizontalArrangement = Arrangement.SpaceBetween) {
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically) {
+
                 var progress by remember { mutableStateOf(0.0f) }
                 val scope = rememberCoroutineScope()
+
                 Button(
                     modifier = Modifier,
                     colors = ButtonDefaults.buttonColors(backgroundColor = (Color.LightGray)),
                     enabled = isButtonEnabled.value,
                     onClick = {
-                        isPathButtonEnabled.value = false
+                        isPathEnabled.value = false
                         scope.launch {
                             while (progress < 1f){
                                 progress += 0.1f
@@ -155,48 +157,68 @@ fun App() {
                             }
                         }
                         converter.convert(pathIn.value, pathOut.value)
-                        // Меняем значение видимости кнопки перехода в папку
-                        isPathButtonEnabled.value = true
+                        // Меняем значение доступа пути в папку
+                        isPathEnabled.value = true
                         progress = 0f
                     })
                 {
                     Text("Сформировать общую спецификацию")
                 }
 
+                AnimatedVisibility(
+                    visible = !isPathEnabled.value,
+                    modifier = Modifier,
+                    enter = fadeIn(animationSpec = tween(durationMillis = 300, easing = LinearEasing)),
+                    exit = fadeOut(animationSpec = tween(durationMillis = 300, easing = LinearEasing))
+                ){
                 // Индикатор прогресса
-                if (!isPathButtonEnabled.value){
-                    LinearProgressIndicator(
+                LinearProgressIndicator(
                         modifier = Modifier.align(Alignment.CenterVertically)
                             .padding(horizontal = 15.dp),
                         progress = progress
-                    )
-                } else {
-                    AnimatedVisibility(
-                        visible = true,
+                )}
+                AnimatedVisibility(
+                        visible = isPathEnabled.value,
                         modifier = Modifier,
-                        enter = fadeIn(animationSpec = tween(durationMillis = 300, easing = LinearEasing))
-                    ){
+                        enter = fadeIn(animationSpec = tween(durationMillis = 300, easing = LinearEasing)),
+                        exit = fadeOut(animationSpec = tween(durationMillis = 300, easing = LinearEasing))
+                ){
                         Icon(Icons.Default.Check,
                             contentDescription = "Check mark",
                             tint = Color.Green
                         )
-                    }
                 }
 
-
+                // Кнопка перехода в папку с общей спецификацией
+                Button(
+                    modifier = Modifier,
+                    colors = ButtonDefaults.buttonColors(backgroundColor = (Color.LightGray)),
+                    enabled = isPathEnabled.value,
+                    onClick = {
+                        val file = File(pathOut.value)
+                        if (Desktop.isDesktopSupported()){
+                            val desktop = Desktop.getDesktop()
+                            if (desktop.isSupported(Desktop.Action.OPEN)){
+                                desktop.open(file)
+                            }
+                        }
+                    }
+                ){
+                    Text("Открыть папку")
+                }
 
             }
-
-
         }
     }
 }
 
 fun main() = application {
     Window(onCloseRequest = ::exitApplication,
-        title = "SpecConverter",
-        state = rememberWindowState(width = 960.dp, height = 360.dp)
+                    title = "SpecConverter",
+                    state = rememberWindowState(width = 960.dp, height = 360.dp)
     ) {
+        // Задаем минимальный размер окна
+        window.minimumSize = Dimension(960,360)
         App()
     }
 }
