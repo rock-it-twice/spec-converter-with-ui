@@ -1,13 +1,6 @@
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -16,6 +9,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
@@ -34,7 +28,7 @@ import java.io.File
 @Preview
 fun App() {
 
-    // Делаем нормальный вид всплывающего окна
+    // Делаем нормальный вид всплывающего окна выбора файла
     UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName())
 
     // Фильтр файлов
@@ -48,12 +42,10 @@ fun App() {
         fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
     }
 
-    // Отслеживание состояния кнопки
+    // Отслеживание состояния кнопки выбора файла
     val isButtonEnabled = remember { mutableStateOf(false) }
-    // Отслеживание состояния существования пути к папке с общей спецификацией
-    val isPathEnabled = remember { mutableStateOf(false) }
 
-    // Запоминаем путь импорта / экспорта
+    // Переменные для хранения путей к файлам импорта / экспорта
     val pathIn = remember { mutableStateOf("файл не выбран") }
     val pathOut = remember { mutableStateOf("") }
 
@@ -62,11 +54,21 @@ fun App() {
     MaterialTheme {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center) {
             // Шапка
-            Text(text = "Specification converter ver: 1.0",
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-                                   .padding(top = 30.dp, bottom = 15.dp),
-                fontWeight = FontWeight.Bold
-            )
+            Row(modifier = Modifier.fillMaxWidth().padding(start = 50.dp, end = 50.dp, top = 30.dp, bottom = 15.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom){
+
+                Text(text = "Specification converter",
+                    modifier = Modifier,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 3.em
+                )
+                Text(text = "ver: 1.1",
+                    modifier = Modifier,
+                    fontWeight = FontWeight.Thin
+                )
+
+            }
             // Выбор файла для конвертации
             Row(modifier = Modifier.fillMaxWidth().padding(start = 50.dp, end = 50.dp),
                 horizontalArrangement = Arrangement.SpaceBetween){
@@ -141,8 +143,10 @@ fun App() {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically) {
 
-                var progress by remember { mutableStateOf(0.0f) }
+                var animationProgress by remember { mutableStateOf(0.0f) }
                 val scope = rememberCoroutineScope()
+                // Отслеживание состояния существования пути к папке с общей спецификацией
+                val isPathEnabled = remember { mutableStateOf(false) }
 
                 Button(
                     modifier = Modifier,
@@ -150,45 +154,23 @@ fun App() {
                     enabled = isButtonEnabled.value,
                     onClick = {
                         isPathEnabled.value = false
+                        animationProgress = 0f
                         scope.launch {
-                            while (progress < 1f){
-                                progress += 0.1f
+                            while (animationProgress < 1f){
+                                animationProgress += 0.1f
                                 delay(100L)
                             }
                         }
                         converter.convert(pathIn.value, pathOut.value)
                         // Меняем значение доступа пути в папку
-                        isPathEnabled.value = true
-                        progress = 0f
+                        isPathEnabled.value = !isPathEnabled.value
                     })
                 {
                     Text("Сформировать общую спецификацию")
                 }
 
-                AnimatedVisibility(
-                    visible = !isPathEnabled.value,
-                    modifier = Modifier,
-                    enter = fadeIn(animationSpec = tween(durationMillis = 300, easing = LinearEasing)),
-                    exit = fadeOut(animationSpec = tween(durationMillis = 300, easing = LinearEasing))
-                ){
-                // Индикатор прогресса
-                LinearProgressIndicator(
-                        modifier = Modifier.align(Alignment.CenterVertically)
-                            .padding(horizontal = 15.dp),
-                        progress = progress
-                )}
-
-                AnimatedVisibility(
-                        visible = isPathEnabled.value,
-                        modifier = Modifier,
-                        enter = fadeIn(animationSpec = tween(durationMillis = 300, easing = LinearEasing)),
-                        exit = fadeOut(animationSpec = tween(durationMillis = 300, easing = LinearEasing))
-                ){
-                        Icon(Icons.Default.Check,
-                            contentDescription = "Check mark",
-                            tint = Color.Green
-                        )
-                }
+                // Индикатор прогресса конвертации
+                ProgressionIndicator(isPathEnabled, animationProgress)
 
                 // Кнопка перехода в папку с общей спецификацией
                 Button(
